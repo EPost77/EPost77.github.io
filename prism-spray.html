@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<title>Prism channel SPRAY diagnostic</title>
+<style>body{font-family:Arial,sans-serif;background:#0b0f1a;color:#f1f5f9;padding:24px}button{background:#f59e0b;color:#111827;border:0;border-radius:10px;padding:12px 18px;font-weight:700;cursor:pointer}#log{white-space:pre-wrap;background:#111827;border:1px solid #2b3b5e;border-radius:10px;padding:14px;margin-top:16px;min-height:200px}</style>
+</head><body>
+<h2>Prism channel — SPRAY diagnostic</h2>
+<p>Opens the Prism Brain front page, then posts a probe and a text call to the opened window AND every frame inside it, one by one. Logs every __prism message that comes back, with its origin.</p>
+<button id="go">RUN SPRAY</button>
+<div id="log">log ready.</div>
+<script>
+var logEl = document.getElementById("log");
+function log(m) { logEl.textContent += "\n" + m; }
+window.addEventListener("message", function (e) {
+  var d = e.data;
+  if (d && typeof d === "object" && d.__prism) {
+    log("MSG IN: kind=" + d.__prism + " origin=" + e.origin + (d.requestId ? " requestId=" + d.requestId : "") + (d.payload ? " payload=" + String(d.payload).slice(0, 220) : ""));
+  }
+});
+document.getElementById("go").addEventListener("click", function () {
+  var win = window.open("https://perchance.org/prism-brain", "sprayWin", "width=860,height=640");
+  if (!win) { log("window.open returned null"); return; }
+  log("opened front-page window; waiting 9s for it and its frame to load…");
+  setTimeout(function () {
+    var n = -1;
+    try { n = win.frames.length; } catch (e) { log("frames.length read FAILED: " + e.message); }
+    log("frames.length = " + n);
+    var req = { requestId: "spray-1", mode: "text", prompt: "Reply with one short plain sentence proving you are awake." };
+    var msg = { __prism: "call", json: JSON.stringify(req) };
+    try { win.postMessage(msg, "*"); log("posted call -> the opened window itself"); } catch (e) { log("post to window FAILED: " + e.message); }
+    for (var i = 0; i < n; i++) {
+      (function (i) {
+        setTimeout(function () {
+          try { win.frames[i].postMessage({ __prism: "probe" }, "*"); log("posted probe -> frames[" + i + "]"); } catch (e) { log("probe frames[" + i + "] FAILED: " + e.message); }
+          setTimeout(function () {
+            try { win.frames[i].postMessage(msg, "*"); log("posted call -> frames[" + i + "]"); } catch (e) { log("call frames[" + i + "] FAILED: " + e.message); }
+          }, 600);
+        }, i * 1600);
+      })(i);
+    }
+    log("spray sent; listening for 150s…");
+  }, 9000);
+});
+</script>
+</body></html>
