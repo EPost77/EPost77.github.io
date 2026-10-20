@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Prism Brain Round-Trip Proof (throwaway harness)</title>
+<style>
+  body { background:#0b0f1a; color:#f1f5f9; font-family:Arial,sans-serif; margin:0; padding:24px; }
+  main { max-width:720px; margin:0 auto; }
+  button { background:#f59e0b; color:#111827; border:0; border-radius:10px; padding:12px 18px; font-weight:700; cursor:pointer; margin:6px 6px 6px 0; font-size:15px; }
+  #log { white-space:pre-wrap; word-break:break-word; background:#0f172a; border:1px solid #334155; border-radius:10px; padding:14px; margin-top:14px; font-size:14px; line-height:1.5; }
+  #proofImg { max-width:100%; margin-top:14px; border-radius:10px; display:none; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Prism Brain — round-trip proof</h1>
+  <p>This page carries the standalone program's exact brain shim. Each button runs one real call to the real brain page and prints what comes back.</p>
+  <button id="pingBtn" type="button">RUN PING</button>
+  <button id="textBtn" type="button">RUN TEXT TEST</button>
+  <button id="imgBtn" type="button">RUN IMAGE TEST</button>
+  <div id="log">No calls yet.</div>
+  <img id="proofImg" alt="">
+</main>
+<script>
+
+// BRAIN ADDRESS — Vigil bakes the live brain page address here (one line). Empty = local engines still run; AI Polish / Live Studio / Image generation show a plain not-connected message.
+var PRISM_BRAIN_URL = "https://e2eb8c5d0a3323706f490c0566164db2.perchance.org/prism-brain";
+
+(function () {
+  "use strict";
+
+  var BRAIN_TIMEOUT_MS = 120000;
+  var NOT_CONNECTED = "The brain is not connected yet — everything else in Prism works; Vigil wires the brain address as the last step before delivery.";
+
+  var seq = 0;
+  var frame = null;
+  var frameReady = null;   // Promise<contentWindow> once the iframe exists
+  var helloSeen = false;   // the brain page posts {__prism:"hello"} when awake
+  var pending = {};        // requestId -> {resolve, reject, timer}
+
+  function ensureFrame() {
+    if (frame) return frameReady;
+    frame = document.createElement("iframe");
+    frame.setAttribute("aria-hidden", "true");
+    frame.setAttribute("title", "Prism brain (hidden)");
+    frame.style.display = "none";
+    frame.src = PRISM_BRAIN_URL;
+    document.body.appendChild(frame);
+    frameReady = new Promise(function (resolve) {
+      var done = false;
+      function finish() { if (!done) { done = true; resolve(frame.contentWindow); } }
+      var giveUp = setTimeout(finish, 15000);
+      var probe = setInterval(function () {
+        if (helloSeen) { clearInterval(probe); clearTimeout(giveUp); finish(); return; }
+        // The proven protocol: a "probe" is answered with another "hello".
+        try { if (frame.contentWindow) frame.contentWindow.postMessage({ __prism: "probe" }, "*"); } catch (e) {}
+      }, 500);
+    });
+    return frameReady;
+  }
+
+  window.addEventListener("message", function (event) {
+    var data = event.data;
+    if (!data || typeof data !== "object") return;
+    if (data.__prism === "hello") { helloSeen = true; return; }
+    if (data.__prism === "result" && data.requestId && pending[data.requestId]) {
+      var entry = pending[data.requestId];
+      delete pending[data.requestId];
+      clearTimeout(entry.timer);
+      var env = null;
+      try { env = JSON.parse(data.payload); } catch (e) { /* handled below */ }
+      if (env && env.ok) {
+        entry.resolve(env.result == null ? "" : String(env.result));
+      } else if (env) {
+        entry.reject(new Error(env.error ? String(env.error) : "The brain reported an error."));
+      } else {
+        entry.reject(new Error("The brain sent back an unreadable answer."));
+      }
+    }
+  });
+
+  function brainCall(mode, prompt, resolution) {
+    if (!PRISM_BRAIN_URL) return Promise.reject(new Error(NOT_CONNECTED));
+    var requestId = "prism-" + Date.now() + "-" + (++seq);
+    return ensureFrame().then(function (win) {
+      return new Promise(function (resolve, reject) {
+        var timer = setTimeout(function () {
+          delete pending[requestId];
+          reject(new Error("The brain did not answer in time (120 seconds). Nothing is broken — wait a moment and try again."));
+        }, BRAIN_TIMEOUT_MS);
+        pending[requestId] = { resolve: resolve, reject: reject, timer: timer };
+        var req = { requestId: requestId, mode: mode, prompt: prompt };
+        if (resolution) req.resolution = resolution;
+        try {
+          win.postMessage({ __prism: "call", json: JSON.stringify(req) }, "*");
+        } catch (e) {
+          clearTimeout(timer);
+          delete pending[requestId];
+          reject(new Error("Could not reach the brain page."));
+        }
+      });
+    });
+  }
+
+  // Same shape the live program uses: root.generateText({instruction, onChunk})
+  // resolves to an object with .text; a supplied onChunk is called once, at
+  // completion, with {textChunk: <the full text>} (this channel has no streaming).
+  async function generateText(opts) {
+    opts = opts || {};
+    var instruction = opts.instruction == null ? "" : String(opts.instruction);
+    var text = await brainCall("text", instruction, null);
+    if (typeof opts.onChunk === "function" && text) {
+      try { opts.onChunk({ textChunk: text }); } catch (e) {}
+    }
+    return { text: text };
+  }
+
+  // Same shape the live program uses: root.generateImage(prompt, {resolution})
+  // resolves to {dataUrl} for a data URL result, otherwise {url}.
+  async function generateImage(prompt, opts) {
+    opts = opts || {};
+    var result = await brainCall("image", prompt == null ? "" : String(prompt), opts.resolution || null);
+    if (result.indexOf("data:") === 0) return { dataUrl: result };
+    return { url: result };
+  }
+
+  window.root = { generateText: generateText, generateImage: generateImage };
+
+  // Fetch patch: the Master Plan screen asks for "src/MASTER-PLAN.md"; in the
+  // standalone, the plan rides inside this file (Script 2 below), so answer
+  // from the embedded copy. Everything else passes through untouched.
+  var realFetch = typeof window.fetch === "function" ? window.fetch.bind(window) : null;
+  window.fetch = function (url, options) {
+    if (String(url) === "src/MASTER-PLAN.md") {
+      return Promise.resolve(new Response(PRISM_MASTER_PLAN_TEXT, {
+        status: 200,
+        headers: { "Content-Type": "text/markdown; charset=utf-8" }
+      }));
+    }
+    if (realFetch) return realFetch(url, options);
+    return Promise.reject(new Error("fetch is not available here."));
+  };
+})();
+
+</script>
+<script>
+(function () {
+  var log = document.getElementById("log");
+  function say(line) {
+    if (log.textContent === "No calls yet.") log.textContent = "";
+    log.textContent += line + "\n";
+  }
+  document.getElementById("pingBtn").addEventListener("click", async function () {
+    say("PING: calling…");
+    try {
+      var r = await root.generateText({ instruction: "Reply with exactly this word and nothing else: READY" });
+      say("PING RESULT: ok — text = " + JSON.stringify(r && r.text));
+    } catch (e) { say("PING RESULT: ERROR — " + (e && e.message ? e.message : e)); }
+  });
+  document.getElementById("textBtn").addEventListener("click", async function () {
+    say("TEXT: calling with a full tool prompt…");
+    try {
+      var r = await root.generateText({ instruction: "You are the Script Expander for a podcast. Write a SHORT two-host script opening (about 120 words) for an episode about a man who saw an ostrich on the center line of a highway at dawn. Hosts: ERIC and DREW. Dialogue only, each line starting with the host name in caps followed by a colon. Stay in those voices; invent nothing beyond the scene given." });
+      say("TEXT RESULT: ok — " + (r && r.text ? r.text.length : 0) + " chars:\n" + (r && r.text ? r.text : "(empty)"));
+    } catch (e) { say("TEXT RESULT: ERROR — " + (e && e.message ? e.message : e)); }
+  });
+  document.getElementById("imgBtn").addEventListener("click", async function () {
+    say("IMAGE: calling the painter…");
+    try {
+      var r = await root.generateImage("A single gold coin on dark slate stone, premium studio light, photoreal", { resolution: "512x512" });
+      var url = (r && (r.dataUrl || r.url)) || "";
+      say("IMAGE RESULT: ok — returned " + (url ? url.slice(0, 60) + "… (" + url.length + " chars)" : "NOTHING"));
+      if (url) { var im = document.getElementById("proofImg"); im.src = url; im.style.display = "block"; }
+    } catch (e) { say("IMAGE RESULT: ERROR — " + (e && e.message ? e.message : e)); }
+  });
+})();
+</script>
+</body>
+</html>
