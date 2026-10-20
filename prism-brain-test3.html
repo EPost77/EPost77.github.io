@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<title>Prism route C channel — proof harness</title>
+<style>body{font-family:Arial,sans-serif;background:#0b0f1a;color:#f1f5f9;padding:24px}button{background:#f59e0b;color:#111827;border:0;border-radius:10px;padding:12px 18px;font-weight:700;cursor:pointer;margin-right:10px}#log{white-space:pre-wrap;background:#111827;border:1px solid #2b3b5e;border-radius:10px;padding:14px;margin-top:16px;min-height:160px}img{max-width:320px;display:block;margin-top:12px;border-radius:10px}</style>
+</head><body>
+<h2>Prism brain-window channel — proof</h2>
+<p>These buttons call the EXACT shim shipping inside Prism Studio (v3, route C — front-page window + frame endpoint). Clicking TEST TEXT opens the small Prism Brain window — leave it open and watch the log.</p>
+<button id="t">RUN TEXT TEST</button>
+<button id="i">RUN IMAGE TEST</button>
+<div id="log">log ready.</div>
+<img id="im" alt="">
+<script>var PRISM_MASTER_PLAN_TEXT = "(harness stub)";</script>
+<script>
+// BRAIN ADDRESS — Vigil bakes the live brain page address here (one line). Empty = local engines still run; AI Polish / Live Studio / Image generation show a plain not-connected message.
+var PRISM_BRAIN_URL = "https://perchance.org/prism-brain";
+
+(function () {
+  "use strict";
+
+  var BRAIN_TIMEOUT_MS = 120000;
+  var NOT_CONNECTED = "The brain is not connected yet — everything else in Prism works; Vigil wires the brain address as the last step before delivery.";
+
+  var seq = 0;
+  // BRAIN WINDOW TRANSPORT — ROUTE C (v3, 2026-10-20). History:
+  // v1 hid the brain in a frame inside the program — calls reached it
+  // but the Perchance AI stalled in the foreign frame (browser tab AND
+  // the installed program, verified twice). v2 opened the brain's own
+  // frame address as a window — Perchance bounces that address to the
+  // generator's front page, so the calls knocked on the front page and
+  // the brain inside its frame never heard them.
+  // Route C is the topology of Eric's Android apps (which work): the
+  // program opens the brain's FRONT PAGE as a small window, posts its
+  // calls INTO the frame inside that page, and the brain (v3) posts
+  // its hello and its answers back out to the window that opened the
+  // page. The brain endpoint is learned from the brain's own hello.
+  var WIN_NAME = "prismBrainWindow-" + Date.now();
+  var brainWin = null;       // the front-page window the program opened
+  var brainEndpoint = null;  // the brain's own window inside that page
+  var brainReady = null;     // Promise<Window> once the brain says hello
+  var helloSeen = false;     // the brain posts {__prism:"hello"} when awake
+  var pending = {};          // requestId -> {resolve, reject, timer, watch}
+
+  function frameOf(win) {
+    try { if (win && win.frames && win.frames.length) return win.frames[0]; } catch (e) {}
+    return null;
+  }
+
+  function callTarget() {
+    return brainEndpoint || frameOf(brainWin) || brainWin;
+  }
+
+  function ensureBrainWindow() {
+    if (brainWin && !brainWin.closed && brainReady) return brainReady;
+    helloSeen = false;
+    brainEndpoint = null;
+    try { brainWin = window.open(PRISM_BRAIN_URL, WIN_NAME, "width=560,height=460"); } catch (e) { brainWin = null; }
+    if (!brainWin) {
+      return Promise.reject(new Error("The Prism Brain window could not open. Nothing is broken — allow windows for this program and run the tool again."));
+    }
+    var w = brainWin;
+    brainReady = new Promise(function (resolve) {
+      var done = false;
+      function finish() { if (!done) { done = true; resolve(callTarget() || w); } }
+      var giveUp = setTimeout(finish, 30000);
+      var probe = setInterval(function () {
+        if (!brainWin || brainWin.closed) { clearInterval(probe); clearTimeout(giveUp); finish(); return; }
+        if (helloSeen) { clearInterval(probe); clearTimeout(giveUp); finish(); return; }
+        // The proven protocol: a "probe" is answered with another "hello".
+        var t = callTarget();
+        try { if (t) t.postMessage({ __prism: "probe" }, "*"); } catch (e) {}
+      }, 500);
+    });
+    return brainReady;
+  }
+
+  window.addEventListener("message", function (event) {
+    var data = event.data;
+    if (!data || typeof data !== "object") return;
+    if (!brainWin || brainWin.closed) return;
+    if (data.__prism === "hello") {
+      helloSeen = true;
+      if (event.source && event.source !== window) brainEndpoint = event.source;
+      return;
+    }
+    if (data.__prism === "result" && data.requestId && pending[data.requestId]) {
+      var entry = pending[data.requestId];
+      var env = null;
+      try { env = JSON.parse(data.payload); } catch (e) { /* handled below */ }
+      if (env && env.ok) {
+        entry.resolve(env.result == null ? "" : String(env.result));
+      } else if (env) {
+        entry.reject(new Error(env.error ? String(env.error) : "The brain reported an error."));
+      } else {
+        entry.reject(new Error("The brain sent back an unreadable answer."));
+      }
+    }
+  });
+
+  function brainCall(mode, prompt, resolution) {
+    if (!PRISM_BRAIN_URL) return Promise.reject(new Error(NOT_CONNECTED));
+    var requestId = "prism-" + Date.now() + "-" + (++seq);
+    return ensureBrainWindow().then(function (win) {
+      return new Promise(function (resolve, reject) {
+        var timer = null, watch = null;
+        function settle(fn, val) {
+          if (!pending[requestId]) return;
+          delete pending[requestId];
+          if (timer) clearTimeout(timer);
+          if (watch) clearInterval(watch);
+          fn(val);
+        }
+        timer = setTimeout(function () {
+          settle(reject, new Error("The brain did not answer in time (120 seconds). Leave the little Prism Brain window open and try again in a moment."));
+        }, BRAIN_TIMEOUT_MS);
+        watch = setInterval(function () {
+          if (!brainWin || brainWin.closed) {
+            settle(reject, new Error("The Prism Brain window was closed. It opens by itself when a tool needs it — just run the tool again."));
+          }
+        }, 1000);
+        pending[requestId] = {
+          resolve: function (v) { settle(resolve, v); },
+          reject: function (e) { settle(reject, e); },
+          timer: timer, watch: watch
+        };
+        var req = { requestId: requestId, mode: mode, prompt: prompt };
+        if (resolution) req.resolution = resolution;
+        try {
+          var target = callTarget() || win;
+          target.postMessage({ __prism: "call", json: JSON.stringify(req) }, "*");
+        } catch (e) {
+          settle(reject, new Error("Could not reach the brain page."));
+        }
+      });
+    });
+  }
+
+  // Same shape the live program uses: root.generateText({instruction, onChunk})
+  // resolves to an object with .text; a supplied onChunk is called once, at
+  // completion, with {textChunk: <the full text>} (this channel has no streaming).
+  async function generateText(opts) {
+    opts = opts || {};
+    var instruction = opts.instruction == null ? "" : String(opts.instruction);
+    var text = await brainCall("text", instruction, null);
+    if (typeof opts.onChunk === "function" && text) {
+      try { opts.onChunk({ textChunk: text }); } catch (e) {}
+    }
+    return { text: text };
+  }
+
+  // Same shape the live program uses: root.generateImage(prompt, {resolution})
+  // resolves to {dataUrl} for a data URL result, otherwise {url}.
+  async function generateImage(prompt, opts) {
+    opts = opts || {};
+    var result = await brainCall("image", prompt == null ? "" : String(prompt), opts.resolution || null);
+    if (result.indexOf("data:") === 0) return { dataUrl: result };
+    return { url: result };
+  }
+
+  window.root = { generateText: generateText, generateImage: generateImage };
+
+  // Fetch patch: the Master Plan screen asks for "src/MASTER-PLAN.md"; in the
+  // standalone, the plan rides inside this file (Script 2 below), so answer
+  // from the embedded copy. Everything else passes through untouched.
+  var realFetch = typeof window.fetch === "function" ? window.fetch.bind(window) : null;
+  window.fetch = function (url, options) {
+    if (String(url) === "src/MASTER-PLAN.md") {
+      return Promise.resolve(new Response(PRISM_MASTER_PLAN_TEXT, {
+        status: 200,
+        headers: { "Content-Type": "text/markdown; charset=utf-8" }
+      }));
+    }
+    if (realFetch) return realFetch(url, options);
+    return Promise.reject(new Error("fetch is not available here."));
+  };
+})();
+</script>
+<script>
+var logEl = document.getElementById("log");
+function log(m) { logEl.textContent += "\n" + m; }
+document.getElementById("t").addEventListener("click", async function () {
+  log("TEXT: calling root.generateText…");
+  try {
+    var r = await root.generateText({ instruction: "Reply with one short plain sentence proving you are awake." });
+    log("TEXT RESULT: OK — " + JSON.stringify(r.text).slice(0, 300));
+  } catch (e) { log("TEXT RESULT: ERROR — " + (e && e.message ? e.message : e)); }
+});
+document.getElementById("i").addEventListener("click", async function () {
+  log("IMAGE: calling root.generateImage…");
+  try {
+    var r = await root.generateImage("A single gold coin on dark slate stone, premium studio light, photoreal", { resolution: "512x512" });
+    var src = r.dataUrl || r.url || "";
+    log("IMAGE RESULT: OK — " + src.slice(0, 80) + "…");
+    if (src) document.getElementById("im").src = src;
+  } catch (e) { log("IMAGE RESULT: ERROR — " + (e && e.message ? e.message : e)); }
+});
+</script>
+</body></html>
