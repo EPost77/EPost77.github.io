@@ -54,6 +54,24 @@
   .sold { color:#b03a2e; font-weight:bold; font-style:italic; }
   .foot { margin-top:16px; background:#17110c; color:#e8dcc4; border-radius:12px; padding:13px 17px; font-size:13.5px; line-height:1.6; }
   .foot b { color:#f0c987; }
+
+  /* ===== PHONE LAYOUT — only small screens read this; the computer view is untouched ===== */
+  @media (max-width: 700px) {
+    .page { margin:12px auto 26px; padding:0 8px; }
+    .scene { border-width:3px; overflow:visible; margin-bottom:118px; }
+    .scene img.photo { border-radius:9px; }
+    .slots { top:calc(100% + 10px); bottom:auto; left:0; right:0; max-width:none; font-size:13.5px; line-height:1.5; padding:9px 12px; border-radius:9px; }
+    .shelves { padding:15px 14px 6px; margin-top:14px; }
+    .shelves h2 { font-size:19px; }
+    .grid { grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:12px; }
+    .card .name { font-size:14px; }
+    .foot { font-size:13px; }
+    .piece .tag { display:none; }
+
+    .signtext { width:13cqw; left:91%; }
+    .signtext .name { font-size:2.1cqw; }
+    .signtext .sub { font-size:1.05cqw; }
+  }
 </style>
 </head>
 <body>

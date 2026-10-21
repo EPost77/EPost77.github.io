@@ -29,6 +29,15 @@
   .foot { margin-top:16px; background:#17110c; color:#e8dcc4; border-radius:12px; padding:13px 17px; font-size:13.5px; line-height:1.6; }
   .foot b { color:#f0c987; }
   .foot a { color:#f0c987; }
+
+  /* ===== PHONE LAYOUT — only small screens read this; the computer view is untouched ===== */
+  @media (max-width: 700px) {
+    .page { margin:12px auto 26px; padding:0 8px; }
+    .panel { padding:16px 14px 8px; }
+    .panel h2 { font-size:20px; }
+    .grid { grid-template-columns:repeat(auto-fill,minmax(155px,1fr)); gap:12px; }
+    .feature .big { font-size:18px; }
+  }
 </style>
 </head>
 <body>

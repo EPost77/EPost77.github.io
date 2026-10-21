@@ -57,6 +57,20 @@
   .checklist label { display:block; padding:.3rem 0; cursor:pointer; }
   #ideasPad { width:100%; min-height:150px; font-family:inherit; font-size:1rem; padding:.6rem; border:2px solid #c8a97e; border-radius:10px; background:#fffdf6; color:#33241a; }
   .padnote { font-style:italic; color:#8a6d4a; font-size:.9rem; margin-top:.4rem; }
+
+  /* ===== PHONE LAYOUT — only small screens read this; the computer view is untouched ===== */
+  @media (max-width: 700px) {
+    .wrap { padding:12px 8px 30px; }
+    .topbar { padding:.6rem .8rem; }
+    .topbar h1 { font-size:19px; }
+    .scene { border-width:3px; }
+    .boards { grid-template-columns:1fr; }
+    .mobile-actions { display:grid !important; grid-template-columns:1fr 1fr; gap:10px; margin-top:12px; }
+    .mobile-actions a { background:#2e2015; color:#f3e9dc; border:1px solid #6d4c2f; border-radius:10px; padding:13px 10px; text-align:center; text-decoration:none; font-size:15px; font-family:Georgia,serif; }
+    .under { font-size:13px; }
+    .modal-card { padding:1.1rem; }
+    .screen-zone .tag, .piece .tag { display:none; }
+  }
 </style>
 </head>
 <body>
@@ -80,6 +94,12 @@
     <p>Where the shop actually gets run. <strong>Left screen: Stephanie's stuff. Right screen: Brenda's stuff.</strong> Click a screen to jump to her board. The shelves and the sofa work too — the rest is just a room.</p>
   </div>
 
+  <div class="mobile-actions" style="display:none">
+    <a href="#stephanie-board">Stephanie's board</a>
+    <a href="#brenda-board">Brenda's board</a>
+    <a href="#" data-open="ship">Shipping checklist</a>
+    <a href="#" data-open="ideas">Couch pad</a>
+  </div>
   <div class="boards">
     <section class="board" id="stephanie-board">
       <h2>Stephanie — Sales Board</h2>
