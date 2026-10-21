@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Favorites — Stuff &amp; Things Co.</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: Georgia, 'Times New Roman', serif; background:#1c1611; color:#2e2620; }
+  .page { max-width:1160px; margin:24px auto 40px; padding:0 14px; }
+  .backbar { margin-bottom:12px; }
+  .backbar a { color:#d9c39a; font-size:14.5px; text-decoration:none; }
+  .backbar a:hover { text-decoration:underline; }
+  .panel { background:#fdf8ef; border-radius:14px; padding:22px 24px 14px; box-shadow:0 10px 30px rgba(0,0,0,.35); }
+  .panel h2 { font-size:24px; color:#5a3d1e; }
+  .panel p.sub { font-style:italic; color:#96714d; font-size:14px; margin:4px 0 18px; }
+  .feature { display:block; text-decoration:none; background:#2c1e12; color:#f3e9dc; border-radius:12px; padding:18px 20px; margin-bottom:20px; }
+  .feature:hover { background:#3a2716; }
+  .feature .big { font-size:21px; color:#f0c987; }
+  .feature .small { font-size:14px; font-style:italic; color:#d9c39a; margin-top:3px; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:16px; }
+  a.card { display:block; text-decoration:none; background:#fff; border:1px solid #ead9c2; border-radius:10px; overflow:hidden; box-shadow:0 3px 8px rgba(90,50,20,.12); }
+  a.card:hover { box-shadow:0 6px 16px rgba(90,50,20,.25); }
+  .card .ph { height:118px; margin:10px 10px 0; border-radius:7px; overflow:hidden; border:1px solid #ead9c2; background:#faf3e3; }
+  .card .ph canvas { width:100%; height:100%; display:block; }
+  .card .info { padding:9px 12px 12px; }
+  .card .name { font-size:15px; color:#40302a; }
+  .card .meta { display:flex; justify-content:space-between; gap:8px; margin-top:4px; font-size:13px; color:#96714d; }
+  .foot { margin-top:16px; background:#17110c; color:#e8dcc4; border-radius:12px; padding:13px 17px; font-size:13.5px; line-height:1.6; }
+  .foot b { color:#f0c987; }
+  .foot a { color:#f0c987; }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="backbar"><a href="Stuff-and-Things-Shopfront-Real.html">&larr; Back to the shop</a></div>
+  <div class="panel">
+    <h2>Favorites — on the shelves</h2>
+    <p class="sub">The pieces people stop for — the signature work from both studios, all in one spot.</p>
+    
+    <div class="grid" id="grid"></div>
+  </div>
+  <div class="foot"><b>Stuff &amp; Things Co.</b> — Little Company, Big Dreams · Handmade Arts &amp; Crafts<br>Created &amp; Built by <a href="mailto:epobuilds@gmail.com">EPoBuilds Studios</a></div>
+</div>
+<script>
+function drawArt(cv, kind){
+  const x = cv.getContext('2d'); const w = cv.width, h = cv.height;
+  if(kind==='skyline'){
+    const g=x.createLinearGradient(0,0,0,h); g.addColorStop(0,'#ff9a3d'); g.addColorStop(.6,'#e84e7a'); g.addColorStop(1,'#5b3a8c'); x.fillStyle=g; x.fillRect(0,0,w,h);
+    x.fillStyle='#2c2350'; const bs=[[.06,.42,.10],[.18,.3,.13],[.33,.48,.09],[.44,.26,.12],[.58,.38,.1],[.7,.3,.13],[.84,.44,.11]];
+    bs.forEach(b=>{ x.fillRect(b[0]*w,b[1]*h,b[2]*w,h); });
+    x.fillStyle='#ffd76a'; for(let i=0;i<26;i++){ x.fillRect(Math.random()*w, (0.3+Math.random()*0.55)*h, 3, 4); }
+    x.fillStyle='#3fa7a0'; x.fillRect(0,h*0.88,w,h*0.12);
+  }
+  if(kind==='hearts' || kind==='pour'){
+    x.fillStyle='#f6eefc'; x.fillRect(0,0,w,h);
+    const cols=['#8e5bd6','#e86ab0','#5bb8e8','#f2a65a','#7a4fd0'];
+    for(let i=0;i<46;i++){ const r=14+Math.random()*46; const gx=Math.random()*w, gy=Math.random()*h;
+      const rg=x.createRadialGradient(gx,gy,2,gx,gy,r); const c=cols[i%cols.length];
+      rg.addColorStop(0,c); rg.addColorStop(1,'rgba(246,238,252,0)'); x.fillStyle=rg; x.beginPath(); x.arc(gx,gy,r,0,7); x.fill(); }
+    if(kind==='hearts'){ x.fillStyle='rgba(255,255,255,.25)'; x.beginPath(); x.moveTo(w*0.5,h*0.82);
+      x.bezierCurveTo(w*0.1,h*0.5,w*0.22,h*0.16,w*0.5,h*0.3); x.bezierCurveTo(w*0.78,h*0.16,w*0.9,h*0.5,w*0.5,h*0.82); x.fill(); }
+  }
+  if(kind==='resin'){
+    const g=x.createLinearGradient(0,0,w,h); g.addColorStop(0,'#3a2350'); g.addColorStop(1,'#6d3a6e'); x.fillStyle=g; x.fillRect(0,0,w,h);
+    const cols=['#ff6b9d','#ffd166','#6ee7c8','#7ab8ff','#e88cff'];
+    for(let i=0;i<9;i++){ const cx=(0.14+ (i%3)*0.33)*w, cy=(0.3+Math.floor(i/3)*0.32)*h, r=w*0.075;
+      const rg=x.createRadialGradient(cx-r*0.3,cy-r*0.3,2,cx,cy,r); rg.addColorStop(0,'#ffffff'); rg.addColorStop(0.35,cols[i%cols.length]); rg.addColorStop(1,'#40255c');
+      x.fillStyle=rg; x.beginPath(); x.ellipse(cx,cy,r,r*0.72,0.3,0,7); x.fill(); }
+  }
+  if(kind==='cups'){
+    x.fillStyle='#33222e'; x.fillRect(0,0,w,h);
+    const cols=['#e63946','#f77f00','#fcbf49','#2a9d8f','#9b5de5','#f15bb5'];
+    cols.forEach((c,i)=>{ const cx=(0.14+i*0.145)*w; x.fillStyle=c; x.beginPath(); x.moveTo(cx,h*0.3); x.lineTo(cx+w*0.1,h*0.3); x.lineTo(cx+w*0.08,h*0.78); x.lineTo(cx+w*0.02,h*0.78); x.closePath(); x.fill();
+      x.fillStyle='rgba(255,255,255,.8)'; x.fillRect(cx,h*0.27,w*0.1,5); });
+  }
+}
+
+
+function drawExtra(cv, kind){
+  const x = cv.getContext('2d'); const w = cv.width, h = cv.height;
+  if(kind==='signs'){
+    x.fillStyle='#8a6844'; x.fillRect(0,0,w,h);
+    for(let i=0;i<4;i++){ x.fillStyle=i%2?'#7d5c39':'#93744c'; x.fillRect(0,i*h/4,w,h/4-2); }
+    x.strokeStyle='rgba(60,38,18,.5)'; for(let i=0;i<40;i++){ x.beginPath(); const y=Math.random()*h; x.moveTo(0,y); x.bezierCurveTo(w*.3,y+3,w*.6,y-3,w,y+2); x.stroke(); }
+    x.fillStyle='#fdf6e3'; x.font='italic bold 44px Georgia'; x.textAlign='center';
+    x.fillText('Be Kind', w/2, h/2-8); x.font='italic 30px Georgia'; x.fillText('anyway', w/2, h/2+38);
+  }
+  if(kind==='poster'){
+    const g=x.createLinearGradient(0,0,w,h); g.addColorStop(0,'#f7e8ef'); g.addColorStop(1,'#e7c8d8'); x.fillStyle=g; x.fillRect(0,0,w,h);
+    const cols=['#d96a8c','#b8578a','#e8a0b8','#8f6fc0'];
+    for(let i=0;i<14;i++){ const cx=Math.random()*w, cy=Math.random()*h, r=10+Math.random()*20;
+      x.fillStyle=cols[i%4]; x.beginPath(); for(let p=0;p<5;p++){ const a=p/5*Math.PI*2; x.ellipse(cx+Math.cos(a)*r*.6, cy+Math.sin(a)*r*.6, r*.42, r*.26, a, 0, 7);} x.fill();
+      x.fillStyle='#f2c14e'; x.beginPath(); x.arc(cx,cy,4,0,7); x.fill(); }
+    x.fillStyle='#a87b1e'; x.font='italic bold 40px Georgia'; x.textAlign='center';
+    x.fillText('She Believed She Could', w/2, h/2-6); x.font='italic bold 44px Georgia'; x.fillText('So She Did', w/2, h/2+44);
+  }
+  if(kind==='tile'){
+    const cols=['#fdf8ef','#e8dcc0','#cfe0ea','#eacfc2'];
+    for(let r=0;r<3;r++) for(let c=0;c<6;c++){ x.fillStyle=cols[(r+c)%4]; x.fillRect(c*w/6+2, r*h/3+2, w/6-4, h/3-4); }
+    x.fillStyle='#6d4c2f'; x.font='italic bold 34px Georgia'; x.textAlign='center'; x.fillText('your words here', w/2, h/2+12);
+  }
+}
+
+const products = [
+  { title:'Acrylic Pour Hearts', price:'Her signature pours', by:'Brenda', art:'hearts', href:'Stuff-and-Things-Studio-Brenda.html' },
+  { title:'Little Wooden Sign — &ldquo;Be Kind Anyway&rdquo;', price:'$16', by:'Stephanie', art:'signs', href:'Stuff-and-Things-Studio-Real.html' },
+  { title:'Original Paintings', price:'Priced per piece', by:'Brenda', art:'skyline', href:'Stuff-and-Things-Studio-Brenda.html' },
+  { title:'Reclaimed Wood Sign — Your Words, or Something Weird', price:'$24', by:'Stephanie', art:'signs', href:'Stuff-and-Things-Studio-Real.html' },
+  { title:'Resin Work', price:'Hearts, stones &amp; creatures', by:'Brenda', art:'resin', href:'Stuff-and-Things-Studio-Brenda.html' },
+  { title:'Poster Prints — &ldquo;She Believed She Could So She Did&rdquo;', price:'The poster from her studio wall', by:'Stephanie', art:'poster', href:'Stuff-and-Things-Studio-Real.html' }
+];
+const grid = document.getElementById('grid');
+products.forEach(p=>{
+  const card = document.createElement('a'); card.className='card'; card.href=p.href;
+  card.innerHTML = `<div class="ph"><canvas width="400" height="225"></canvas></div>
+    <div class="info"><div class="name">${p.title}</div><div class="meta"><span>${p.price}</span><span>by ${p.by}</span></div></div>`;
+  grid.appendChild(card);
+  const cv = card.querySelector('canvas');
+  if(['signs','poster','tile'].includes(p.art)) drawExtra(cv, p.art); else drawArt(cv, p.art);
+});
+</script>
+</body>
+</html>
